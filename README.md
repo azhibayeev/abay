@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Knowledge Graph
 
-## Getting Started
+Интерактивное приложение для управления 3D-графом связей с людьми. Визуализирует узлы и связи в виде интерактивной 3D-сферы с поддержкой задач, архивирования и тёмной темы.
 
-First, run the development server:
+## Технологии
+
+- **Next.js 16** (App Router, Server Components)
+- **Supabase** — база данных и аутентификация
+- **Three.js / @react-three/fiber** — 3D-визуализация
+- **Tailwind CSS v4** — стили
+- **TypeScript**
+
+## Быстрый старт
+
+### 1. Установка зависимостей
+
+```bash
+npm install
+```
+
+### 2. Переменные окружения
+
+Создайте файл `.env.local` в корне проекта:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://<your-project>.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+```
+
+Значения берутся из **Supabase Dashboard → Project Settings → API**.
+
+### 3. Создание таблиц в Supabase
+
+Откройте **Supabase Dashboard → SQL Editor** и выполните скрипт:
+
+```
+supabase/migrations/001_graph_schema.sql
+```
+
+Этот скрипт создаёт:
+- таблицу `people` — узлы (люди) с типами связи и 3D-координатами
+- таблицу `connections` — рёбра между узлами
+- таблицу `tasks` — задачи для каждого человека
+- RLS-политики (только свои данные)
+- Realtime-подписки
+
+### 4. Запуск
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Откройте [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Функциональность
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3D-граф
+- Интерактивная сфера с узлами-людьми
+- Вращение мышью (OrbitControls), зум колёсиком
+- Цвет узла определяется типом связи:
+  - 🟣 Philosophical — фиолетовый
+  - 🔵 Business — синий
+  - 🩵 Psychological — голубой
+  - 🔴 Practical — красный
+  - 🩷 Synthesis — розовый
+- При >100 узлах используется `InstancedMesh` для производительности
 
-## Learn More
+### Управление
+- **Добавить человека** — имя, биография, тип связи, связи с другими
+- **Клик на узел** — боковая панель с деталями
+- **Архивировать** — убрать с графа (доступен в разделе «Чертовщина»)
 
-To learn more about Next.js, take a look at the following resources:
+### Задачи
+- Список задач для каждого человека
+- Чекбоксы завершения, дедлайны
+- Добавление / удаление / редактирование
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Realtime
+Изменения автоматически синхронизируются через Supabase Realtime — несколько вкладок будут видеть одинаковый граф.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Структура проекта
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+app/
+  page.tsx               ← главная страница (граф)
+  auth/                  ← страницы авторизации
+components/
+  graph/
+    GraphCanvas.tsx      ← Three.js Canvas
+    GraphNodes.tsx       ← рендеринг узлов (InstancedMesh / Single)
+    GraphEdges.tsx       ← рёбра-линии
+  sidebar/
+    LeftSidebar.tsx      ← навигационное меню
+    NodeDetailPanel.tsx  ← панель деталей узла
+    AddPersonModal.tsx   ← модал добавления
+  GraphApp.tsx           ← главный клиентский компонент
+hooks/
+  useGraphData.ts        ← данные + Realtime
+  useGraphInteraction.ts ← состояние выбранного узла
+lib/
+  graph-types.ts         ← TypeScript типы
+  graph-service.ts       ← Supabase CRUD
+supabase/
+  migrations/
+    001_graph_schema.sql ← SQL-схема
+```
