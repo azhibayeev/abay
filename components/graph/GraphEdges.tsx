@@ -22,13 +22,18 @@ export function GraphEdges({ people, connections, selectedPersonId }: GraphEdges
     const defaultColor = new THREE.Color('#475569')
     const highlightColor = new THREE.Color('#94a3b8')
 
+    const getPos = (p: Person) =>
+      p.name === 'Абай' ? { x: 0, y: 0, z: 0 } : { x: p.pos_x, y: p.pos_y, z: p.pos_z }
+
     for (const conn of connections) {
       const from = personMap.get(conn.from_person_id)
       const to = personMap.get(conn.to_person_id)
       if (!from || !to) continue
 
-      posArr.push(from.pos_x, from.pos_y, from.pos_z)
-      posArr.push(to.pos_x, to.pos_y, to.pos_z)
+      const fp = getPos(from)
+      const tp = getPos(to)
+      posArr.push(fp.x, fp.y, fp.z)
+      posArr.push(tp.x, tp.y, tp.z)
 
       const isHighlighted =
         selectedPersonId &&
