@@ -7,7 +7,8 @@ import { Html } from '@react-three/drei'
 import type { Person } from '@/lib/graph-types'
 import { CONNECTION_COLORS } from '@/lib/graph-types'
 
-// Drag: raycast onto sphere of same radius to keep node on sphere surface
+// Drag: raycast onto sphere of same radius to keep node on sphere surface.
+// Tracks didMove so we can avoid opening the panel on click after a drag.
 function useNodeDrag(
   person: Person,
   onDragEnd: (id: string, x: number, y: number, z: number) => void
@@ -16,12 +17,15 @@ function useNodeDrag(
   const [dragPos, setDragPos] = useState<THREE.Vector3 | null>(null)
   const dragPosRef = useRef({ x: person.pos_x, y: person.pos_y, z: person.pos_z })
   const draggingRef = useRef(false)
+  const didMoveRef = useRef(false)
+  const justDraggedRef = useRef(false)
 
   const startDrag = useCallback(
     (e: THREE.Event) => {
       e.stopPropagation()
       if (draggingRef.current) return
       draggingRef.current = true
+      didMoveRef.current = false
       const radius =
         Math.sqrt(
           person.pos_x * person.pos_x +
@@ -38,6 +42,7 @@ function useNodeDrag(
       setDragPos(new THREE.Vector3(person.pos_x, person.pos_y, person.pos_z))
 
       const onMove = (ev: PointerEvent) => {
+        didMoveRef.current = true
         const rect = canvas.getBoundingClientRect()
         const ndcX = ((ev.clientX - rect.left) / rect.width) * 2 - 1
         const ndcY = -((ev.clientY - rect.top) / rect.height) * 2 + 1
@@ -55,9 +60,13 @@ function useNodeDrag(
         document.removeEventListener('pointercancel', onUp)
         draggingRef.current = false
         if (controls) controls.enabled = true
+        justDraggedRef.current = didMoveRef.current
         const cur = dragPosRef.current
         onDragEnd(person.id, cur.x, cur.y, cur.z)
         setDragPos(null)
+        setTimeout(() => {
+          justDraggedRef.current = false
+        }, 90)
       }
 
       document.addEventListener('pointermove', onMove)
@@ -71,7 +80,7 @@ function useNodeDrag(
     ? [dragPos.x, dragPos.y, dragPos.z]
     : [person.pos_x, person.pos_y, person.pos_z]
 
-  return { position, isDragging: dragPos !== null, onPointerDown: startDrag }
+  return { position, isDragging: dragPos !== null, onPointerDown: startDrag, justDraggedRef }
 }
 
 const INSTANCED_THRESHOLD = 100
@@ -87,7 +96,7 @@ interface GraphNodesProps {
   onDragEnd: (id: string, x: number, y: number, z: number) => void
 }
 
-// ── Core node (Абай) — large central sphere ──────────────────────────────────
+// ── Core node (Абай) — large central sphere, fixed at center, no drag ─────────
 
 function CoreNode({
   person,
@@ -95,17 +104,14 @@ function CoreNode({
   isHovered,
   onSelect,
   onHover,
-  onDragEnd,
 }: {
   person: Person
   isSelected: boolean
   isHovered: boolean
   onSelect: (p: Person) => void
   onHover: (id: string | null) => void
-  onDragEnd: (id: string, x: number, y: number, z: number) => void
 }) {
   const meshRef = useRef<THREE.Mesh>(null)
-  const { position, onPointerDown } = useNodeDrag(person, onDragEnd)
   const colorHex = CONNECTION_COLORS[person.connection_type]
   const baseScale = isSelected ? 1.2 : isHovered ? 1.1 : 1.0
 
@@ -123,12 +129,11 @@ function CoreNode({
   return (
     <mesh
       ref={meshRef}
-      position={position}
+      position={[0, 0, 0]}
       onClick={(e) => {
         e.stopPropagation()
         onSelect(person)
       }}
-      onPointerDown={onPointerDown}
       onPointerOver={(e) => {
         e.stopPropagation()
         onHover(person.id)
@@ -189,7 +194,7 @@ function SingleNode({
   onDragEnd: (id: string, x: number, y: number, z: number) => void
 }) {
   const meshRef = useRef<THREE.Mesh>(null)
-  const { position, onPointerDown } = useNodeDrag(person, onDragEnd)
+  const { position, onPointerDown, justDraggedRef } = useNodeDrag(person, onDragEnd)
   const colorHex = CONNECTION_COLORS[person.connection_type]
   const baseScale = isSelected ? 1.4 : isHovered ? 1.2 : 1.0
 
@@ -211,6 +216,7 @@ function SingleNode({
       position={position}
       onClick={(e) => {
         e.stopPropagation()
+        if (justDraggedRef.current) return
         onSelect(person)
       }}
       onPointerDown={onPointerDown}
@@ -360,7 +366,6 @@ export function GraphNodes({
           isHovered={hoveredPersonId === corePerson.id}
           onSelect={onSelect}
           onHover={onHover}
-          onDragEnd={onDragEnd}
         />
       )}
       {restPeople.map((person) => (

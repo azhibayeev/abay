@@ -11,6 +11,7 @@ import {
   BarChart2,
   Cpu,
   Calendar,
+  LayoutList,
   Plus,
   LogOut,
   UserCircle,
@@ -24,6 +25,7 @@ const NAV_ICONS: Record<NavSection, React.ReactNode> = {
   analytics: <BarChart2 size={16} />,
   models: <Cpu size={16} />,
   calendar: <Calendar size={16} />,
+  tasks: <LayoutList size={16} />,
 }
 
 interface LeftSidebarProps {

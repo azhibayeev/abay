@@ -9,6 +9,7 @@ import { LeftSidebar } from '@/components/sidebar/LeftSidebar'
 import { NodeDetailPanel } from '@/components/sidebar/NodeDetailPanel'
 import { AddPersonModal } from '@/components/sidebar/AddPersonModal'
 import { CalendarSection } from '@/components/sidebar/CalendarSection'
+import { TasksSection } from '@/components/sidebar/TasksSection'
 import { LoginModal } from '@/components/LoginModal'
 import type { Person } from '@/lib/graph-types'
 import { CONNECTION_COLORS, CONNECTION_TYPE_LABELS, ALL_CONNECTION_TYPES } from '@/lib/graph-types'
@@ -88,9 +89,12 @@ function ArchiveSection({
 
 // ── Main app component ───────────────────────────────────────────────────────
 
+const HINT_STORAGE_KEY = 'graph_node_click_hint_seen'
+
 export function GraphApp() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
+  const [showHintToast, setShowHintToast] = useState(false)
 
   const {
     activePeople,
@@ -143,6 +147,13 @@ export function GraphApp() {
   const handleNodeSelect = useCallback(
     (person: Person | null) => {
       selectPerson(person)
+      if (person != null && typeof localStorage !== 'undefined') {
+        if (!localStorage.getItem(HINT_STORAGE_KEY)) {
+          localStorage.setItem(HINT_STORAGE_KEY, '1')
+          setShowHintToast(true)
+          setTimeout(() => setShowHintToast(false), 4500)
+        }
+      }
     },
     [selectPerson]
   )
@@ -157,6 +168,19 @@ export function GraphApp() {
   const isGraphSection = activeSection === 'graph'
   const isArchiveSection = activeSection === 'archive'
   const isCalendarSection = activeSection === 'calendar'
+  const isTasksSection = activeSection === 'tasks'
+
+  // Escape closes right panel when graph section and someone selected
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (selectedPerson != null && isGraphSection) {
+        closePanel()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [selectedPerson, isGraphSection, closePanel])
 
   // Active connections (between non-archived people)
   const activePersonIds = new Set(activePeople.map((p) => p.id))
@@ -202,7 +226,18 @@ export function GraphApp() {
           <CalendarSection tasks={tasks} people={activePeople} />
         )}
 
-        {!isGraphSection && !isArchiveSection && !isCalendarSection && (
+        {isTasksSection && (
+          <TasksSection
+            tasks={tasks}
+            people={activePeople}
+            connections={activeConnections}
+            onUpdateTask={updateTask}
+            onDeleteTask={deleteTask}
+            isAdmin={isAdmin}
+          />
+        )}
+
+        {!isGraphSection && !isArchiveSection && !isCalendarSection && !isTasksSection && (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <p className="text-slate-500 text-lg mb-2">Раздел в разработке</p>
@@ -224,6 +259,7 @@ export function GraphApp() {
             onUpdateTask={updateTask}
             onDeleteTask={deleteTask}
             isAdmin={isAdmin}
+            onOpenTasksSection={() => setActiveSection('tasks')}
           />
         )}
       </main>
@@ -243,6 +279,17 @@ export function GraphApp() {
           onClose={() => setShowLoginModal(false)}
           onSuccess={() => setShowLoginModal(false)}
         />
+      )}
+
+      {/* First-time hint toast */}
+      {showHintToast && (
+        <div
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-lg bg-[#0d1117] border border-white/10
+            text-slate-300 text-sm shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-300"
+          role="status"
+        >
+          Клик — открыть карточку, перетаскивание — двигать узел
+        </div>
       )}
     </div>
   )

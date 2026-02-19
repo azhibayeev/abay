@@ -61,9 +61,24 @@ export function CalendarSection({ tasks, people }: CalendarSectionProps) {
   }
 
   const personMap = useMemo(() => new Map(people.map((p) => [p.id, p])), [people])
+  const hasTasksWithDeadlines = tasks.some((t) => getDeadlineKey(t.deadline))
 
   const selectedKey = selectedDay
   const selectedTasks = selectedKey ? tasksByDeadline.get(selectedKey) ?? [] : []
+
+  if (!hasTasksWithDeadlines) {
+    return (
+      <div className="flex-1 flex flex-col p-6 overflow-hidden">
+        <h2 className="text-white text-xl font-semibold flex items-center gap-2 mb-4">
+          <CalendarIcon size={22} className="text-slate-400" />
+          Календарь
+        </h2>
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-slate-500">Нет задач с датами</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex-1 flex flex-col p-6 overflow-hidden">

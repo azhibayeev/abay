@@ -80,6 +80,7 @@ export type NavSection =
   | 'analytics'
   | 'models'
   | 'calendar'
+  | 'tasks'
 
 export const NAV_SECTIONS: { id: NavSection; label: string }[] = [
   { id: 'research', label: 'Исследования' },
@@ -89,4 +90,5 @@ export const NAV_SECTIONS: { id: NavSection; label: string }[] = [
   { id: 'analytics', label: 'Аналитика' },
   { id: 'models', label: 'Модели' },
   { id: 'calendar', label: 'Календарь' },
+  { id: 'tasks', label: 'Задачи' },
 ]
